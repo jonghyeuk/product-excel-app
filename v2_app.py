@@ -6,7 +6,15 @@ from io import BytesIO
 import requests
 from bs4 import BeautifulSoup
 
-st.title("📦 상품등록 자동화 v2 (최적화 상품명 포함)")
+st.title("📦 상품등록 자동화 v2 (최적화 상품명 포함 + 템플릿 엎어쓰기)")
+
+# 카테고리 선택
+category = st.selectbox("카테고리를 선택하세요", ["문구세트", "라텍스베개"])
+category_map = {
+    "문구세트": 50007969,
+    "라텍스베개": 50016741
+}
+category_code = category_map[category]
 
 # 입력
 urls = st.text_area("상품 URL 5개 (한 줄에 하나씩)").splitlines()
@@ -20,7 +28,8 @@ def extract_product_title(url):
         r = requests.get(url, timeout=5)
         soup = BeautifulSoup(r.text, 'html.parser')
         title = soup.title.string if soup.title else "상품명없음"
-        return title.strip().replace("\n", " ").replace("\t", " ").split("|")[0]
+        clean_title = title.strip().replace("\n", " ").replace("\t", " ").split("|")[0]
+        return clean_title.replace("오너클랜", "").strip()
     except:
         return "상품명없음"
 
@@ -47,58 +56,75 @@ def generate_optimized_names(keywords, max_len=25):
             name3 = k + base
     return [name1.strip(), name2.strip(), name3.strip()]
 
-# 메인 처리
-if st.button("엑셀 생성하기") and len(urls) == 5:
+# 세션 상태 초기화
+if 'selected_names' not in st.session_state:
+    st.session_state.selected_names = [None] * 5
+
+# 처리
+if len(urls) == 5:
     prices = list(map(int, price_input.split(",")))
     titles = [extract_product_title(url) for url in urls]
     keyword_sets = [extract_keywords(t) for t in titles]
     recommended_names = [generate_optimized_names(kws) for kws in keyword_sets]
 
-    selected_names = []
-    for i, name_set in enumerate(recommended_names):
+    for i in range(5):
         st.markdown(f"**[{i+1}번 상품명 추천]**")
-        selected = st.radio(f"추천 상품명 선택 (상품 {i+1})", name_set, key=f"name_{i}")
-        selected_names.append(selected)
+        selected = st.radio(
+            f"추천 상품명 선택 (상품 {i+1})",
+            recommended_names[i],
+            index=0,
+            key=f"radio_{i}"
+        )
+        st.session_state.selected_names[i] = selected
 
-    today = datetime.today().strftime('%m%d')
-    seller_codes = [url.split("selfcode=")[-1] if "selfcode=" in url else "" for url in urls]
+    if all(st.session_state.selected_names):
+        if st.button("📥 엑셀 생성하기"):
+            today = datetime.today().strftime('%m%d')
+            seller_codes = [url.split("selfcode=")[-1] if "selfcode=" in url else "" for url in urls]
 
-    # 가격 기반 포인트
-    def point(val, p):
-        if p <= 10000:
-            return 100
-        elif p <= 30000:
-            return 200
-        else:
-            return 300
+            # 가격 기반 포인트
+            def point(val, p):
+                if p <= 10000:
+                    return 100
+                elif p <= 30000:
+                    return 200
+                else:
+                    return 300
 
-    data = {
-        "상품상태": ["신상품"] * 5,
-        "카테고리ID": [50007969] * 5,
-        "상품명": selected_names,
-        "판매가": prices,
-        "재고수량": [999] * 5,
-        "A/S 안내내용": ["평일 10시부터 5시까지 톡상담가능합니다"] * 5,
-        "A/S 전화번호": ["010-2909-3462"] * 5,
-        "대표 이미지 파일명": [f"{today}-{i+1}-1.JPG" for i in range(5)],
-        "추가 이미지 파일명": [",".join([f"{today}-{i+1}-{j}.JPG" for j in range(2,6)]) for i in range(5)],
-        "상품 상세정보": details,
-        "판매자코드": seller_codes,
-        "텍스트리뷰 작성시 지급 포인트": [point("text", p) for p in prices],
-        "포토/동영상 리뷰 작성시 지급 포인트": [point("photo", p)+200 for p in prices],
-        "한달사용 텍스트리뷰 작성시 지급 포인트": [point("text", p) for p in prices],
-        "한달사용 포토/동영상 리뷰 작성시 지급 포인트": [point("photo", p)+200 for p in prices],
-        "알림받기동의 고객 리뷰 작성 시 지급 포인트": [point("alarm", p) for p in prices],
-        "AR": [point("ar", p) for p in prices],
-        "AS": [point("as", p)+200 for p in prices],
-        "AT": [point("at", p)+400 for p in prices],
-        "AU": [point("au", p)+600 for p in prices],
-        "옵션명": [opt.split(":")[0] for opt in options],
-        "옵션값": [opt.split(":")[1] for opt in options],
-    }
+            # 기존 템플릿 불러오기
+            template = pd.read_excel("상품등록완료엑셀_기존데이터유지_정답형.xlsx", sheet_name=0)
+            df = template.copy()
 
-    df = pd.DataFrame(data)
-    output = BytesIO()
-    df.to_excel(output, index=False)
-    st.success("✅ 엑셀 생성 완료! 아래에서 다운로드하세요.")
-    st.download_button("엑셀 다운로드", data=output.getvalue(), file_name="상품등록완료엑셀_v2.xlsx")
+            update_cols = {
+                "상품상태": "신상품",
+                "카테고리ID": category_code,
+                "상품명": st.session_state.selected_names,
+                "판매가": prices,
+                "재고수량": 999,
+                "A/S 안내내용": "평일 10시부터 5시까지 톡상담가능합니다",
+                "A/S 전화번호": "010-2909-3462",
+                "대표 이미지 파일명": [f"{today}-{i+1}-1.JPG" for i in range(5)],
+                "추가 이미지 파일명": [",".join([f"{today}-{i+1}-{j}.JPG" for j in range(2,6)]) for i in range(5)],
+                "상품 상세정보": details,
+                "판매자코드": seller_codes,
+                "텍스트리뷰 작성시 지급 포인트": [point("text", p) for p in prices],
+                "포토/동영상 리뷰 작성시 지급 포인트": [point("photo", p)+200 for p in prices],
+                "한달사용 텍스트리뷰 작성시 지급 포인트": [point("text", p) for p in prices],
+                "한달사용 포토/동영상 리뷰 작성시 지급 포인트": [point("photo", p)+200 for p in prices],
+                "알림받기동의 고객 리뷰 작성 시 지급 포인트": [point("alarm", p) for p in prices],
+                "AR": [point("ar", p) for p in prices],
+                "AS": [point("as", p)+200 for p in prices],
+                "AT": [point("at", p)+400 for p in prices],
+                "AU": [point("au", p)+600 for p in prices],
+                "옵션명": [opt.split(":")[0] for opt in options],
+                "옵션값": [opt.split(":")[1] for opt in options],
+            }
+
+            for col, val in update_cols.items():
+                if col in df.columns:
+                    df.loc[:4, col] = val if isinstance(val, list) else [val] * 5
+
+            output = BytesIO()
+            df.to_excel(output, index=False)
+            st.success("✅ 엑셀 생성 완료! 아래에서 다운로드하세요.")
+            st.download_button("엑셀 다운로드", data=output.getvalue(), file_name="상품등록완료엑셀_v2.xlsx")
