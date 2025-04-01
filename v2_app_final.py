@@ -46,7 +46,7 @@ if len(product_names) == 5 and len(details) == 5 and len(options) == 5 and len(s
             "대표 이미지 파일명": [f"{today}-{i+1}-1.JPG" for i in range(5)],
         "추가 이미지 파일명": [",".join([f"{today}-{i+1}-1.JPG"] * 4) for i in range(5)],
                 "상품 상세정보": details,
-            "상품코드": seller_codes,
+            "판매자상품코드": seller_codes,
             "텍스트리뷰 작성시 지급 포인트": [point("text", p) for p in prices],
             "포토/동영상 리뷰 작성시 지급 포인트": [point("photo", p)+200 for p in prices],
             "한달사용 텍스트리뷰 작성시 지급 포인트": [point("text", p) for p in prices],
