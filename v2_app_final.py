@@ -105,7 +105,7 @@ if all(st.session_state.selected_names) and st.button("📥 엑셀 생성하기"
         "대표 이미지 파일명": [f"{today}-{i+1}-1.JPG" for i in range(5)],
         "추가 이미지 파일명": [",".join([f"{today}-{i+1}-{j}.JPG" for j in range(2,6)]) for i in range(5)],
         "상품 상세정보": details,
-        "판매자코드": seller_codes,
+        "자체상품코드": seller_codes,
         "텍스트리뷰 작성시 지급 포인트": [point("text", p) for p in prices],
         "포토/동영상 리뷰 작성시 지급 포인트": [point("photo", p)+200 for p in prices],
         "한달사용 텍스트리뷰 작성시 지급 포인트": [point("text", p) for p in prices],
