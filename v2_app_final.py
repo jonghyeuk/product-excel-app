@@ -23,9 +23,11 @@ options = st.text_area("옵션 5개 (한 줄에 하나씩, 예: 종류:핑크,�
 # ✅ 3. 상품명 추출 함수 (오너클랜 제거 포함)
 def extract_product_title(url):
     try:
-        r = requests.get(url, timeout=5)
+        headers = {"User-Agent": "Mozilla/5.0"}
+        r = requests.get(url, headers=headers, timeout=5)
         soup = BeautifulSoup(r.text, 'html.parser')
-        title = soup.title.string if soup.title else "상품명없음"
+        title_tag = soup.find("meta", property="og:title")
+        title = title_tag["content"] if title_tag and "content" in title_tag.attrs else (soup.title.string if soup.title else "상품명없음")
         clean_title = title.strip().replace("\n", " ").replace("\t", " ").split("|")[0]
         return clean_title.replace("오너클랜", "").strip()
     except:
