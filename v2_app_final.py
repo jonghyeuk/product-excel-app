@@ -5,7 +5,7 @@ from datetime import datetime
 from io import BytesIO
 
 st.set_page_config(page_title="상품등록 자동화", layout="wide")
-st.title("📦 상품등록 자동화 v2 (상품명 직접 입력 버전)")
+st.title("📦 상품등록 자동화 v2 (상품명 직접 입력 + 판매자 상품코드 반영)")
 
 # ✅ 카테고리 선택
 category = st.selectbox("카테고리를 선택하세요", ["문구세트", "라텍스베개"])
@@ -17,7 +17,7 @@ product_names = st.text_area("상품명 5개 (한 줄에 하나씩)").splitlines
 price_input = st.text_input("판매가 5개 입력 (쉼표로 구분)", "19900,15800,18800,8800,7500")
 details = st.text_area("상세페이지 HTML 5개 (한 줄에 하나씩)").splitlines()
 options = st.text_area("옵션 5개 (한 줄에 하나씩, 예: 종류:핑크,노랑)").splitlines()
-seller_codes = st.text_area("판매자 코드 5개 (한 줄에 하나씩)").splitlines()
+seller_codes = st.text_area("판매자 상품코드 5개 (한 줄에 하나씩)").splitlines()
 
 if len(product_names) == 5 and len(details) == 5 and len(options) == 5 and len(seller_codes) == 5:
     if st.button("📥 엑셀 생성하기"):
@@ -44,9 +44,9 @@ if len(product_names) == 5 and len(details) == 5 and len(options) == 5 and len(s
             "A/S 안내내용": "평일 10시부터 5시까지 톡상담가능합니다",
             "A/S 전화번호": "010-2909-3462",
             "대표 이미지 파일명": [f"{today}-{i+1}-1.JPG" for i in range(5)],
-        "추가 이미지 파일명": [",".join([f"{today}-{i+1}-1.JPG"] * 4) for i in range(5)],
-                "상품 상세정보": details,
-            "판매자상품코드": seller_codes,
+            "추가 이미지 파일명": [",".join([f"{today}-{i+1}-1.JPG"] * 4) for i in range(5)],
+            "상품 상세정보": details,
+            "판매자 상품코드": seller_codes,
             "텍스트리뷰 작성시 지급 포인트": [point("text", p) for p in prices],
             "포토/동영상 리뷰 작성시 지급 포인트": [point("photo", p)+200 for p in prices],
             "한달사용 텍스트리뷰 작성시 지급 포인트": [point("text", p) for p in prices],
